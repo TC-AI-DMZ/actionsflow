@@ -1,0 +1,101 @@
+name: Contribution Graph Generator
+
+on:
+  schedule:
+    # Run at specific times to create the pattern
+    # Multiple times per day for higher contribution counts
+    - cron: '0 0,6,12,18 * * *'
+  workflow_dispatch:
+
+jobs:
+  commit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure git
+        run: |
+          git config user.name "TC-AI-DMZ"
+          git config user.email "thomas@tc-ai-dmz.com"
+
+      - name: Create contribution commit
+        run: |
+          # Get current date and week information
+          WEEK_DAY=$(date +%u)  # 1-7 (Monday-Sunday)
+          WEEK_NUM=$(date +%U)  # Week number
+          
+          # Define the "HIRE ME" pattern (7 rows x 52 weeks)
+          # 1 = commit, 0 = no commit
+          # Each letter is roughly 4-5 weeks wide with spacing
+          
+          # This creates a simple pattern - you can customize this
+          # Week positions (0-51) where commits should be made for current day
+          PATTERN=""
+          
+          # H pattern (weeks 0-4)
+          case $WEEK_DAY in
+            1|2|3|4|5|6|7) PATTERN="${PATTERN} 0 4" ;;
+          esac
+          case $WEEK_DAY in
+            4) PATTERN="${PATTERN} 1 2 3" ;;
+          esac
+          
+          # I pattern (weeks 6-8)
+          case $WEEK_DAY in
+            1|7) PATTERN="${PATTERN} 6 7 8" ;;
+            2|3|4|5|6) PATTERN="${PATTERN} 7" ;;
+          esac
+          
+          # R pattern (weeks 10-14)
+          case $WEEK_DAY in
+            1|2|3|4|5|6|7) PATTERN="${PATTERN} 10 14" ;;
+          esac
+          case $WEEK_DAY in
+            1|4) PATTERN="${PATTERN} 11 12 13" ;;
+            5|6|7) PATTERN="${PATTERN} 13" ;;
+          esac
+          
+          # E pattern (weeks 16-20)
+          case $WEEK_DAY in
+            1|7) PATTERN="${PATTERN} 16 17 18 19 20" ;;
+            1|4|7) PATTERN="${PATTERN} 16" ;;
+          esac
+          
+          # M pattern (weeks 24-30)
+          case $WEEK_DAY in
+            1|2|3|4|5|6|7) PATTERN="${PATTERN} 24 30" ;;
+          esac
+          case $WEEK_DAY in
+            2|3) PATTERN="${PATTERN} 25 26 28 29" ;;
+            1) PATTERN="${PATTERN} 27" ;;
+          esac
+          
+          # E pattern (weeks 32-36)
+          case $WEEK_DAY in
+            1|7) PATTERN="${PATTERN} 32 33 34 35 36" ;;
+            1|4|7) PATTERN="${PATTERN} 32" ;;
+          esac
+          
+          # Check if current week should have a commit
+          SHOULD_COMMIT=false
+          for week in $PATTERN; do
+            if [ "$WEEK_NUM" -eq "$week" ]; then
+              SHOULD_COMMIT=true
+              break
+            fi
+          done
+          
+          # Create commit if in pattern
+          if [ "$SHOULD_COMMIT" = true ]; then
+            echo "Creating contribution for week $WEEK_NUM, day $WEEK_DAY"
+            mkdir -p .contributions
+            echo "Contribution: $(date)" >> .contributions/log.txt
+            git add .contributions/log.txt
+            git commit -m "📊 Contribution graph update: HIRE ME"
+            git push
+          else
+            echo "No contribution needed for week $WEEK_NUM, day $WEEK_DAY"
+          fi
